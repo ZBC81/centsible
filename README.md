@@ -1,5 +1,7 @@
 # Centsible – Money that makes sense
 
+Team : Zach, Jason, Joshua
+
 > **This project is a prototype and is not financial advice.**
 
 An AI money coach and financial-literacy lab for teenagers. At its centre is **Centy**, a Gemini-powered assistant that answers money questions and helps you decide before you spend. It's a static website: no server and no bank connection. The categorizer, forecast and alerts run in your browser; Centy calls Google's Gemini API with your own key.
