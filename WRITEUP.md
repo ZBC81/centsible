@@ -1,8 +1,8 @@
 # Centsible – Money that makes sense
 
 **Track:** Finance
-**Team:** [Insert team members' names]
-**Code:** [GitHub repository link] · **Demo video:** [link]
+**Team:** Jason, Josh, Zach
+**Code:** https://github.com/ZBC81/centsible
 
 > This project is a prototype and is not financial advice.
 
