@@ -6,6 +6,6 @@
    off for its project, and delete the key after judging. Leave it "" to require
    each visitor to add their own key. */
 window.CENTSIBLE_CONFIG = {
-  geminiKey: "AQ.Ab8RN6JiP1zHXvXcYtE1S_VJp49v4UDvKH_mqHOfjrfDcRds6Q",
+  geminiKey: "AQ.Ab8RN6JvE3rOVdErK6IRd9YWJN8mq82H7ss21pjrtU31q-yzKw",
   model: "gemini-flash-latest"
 };
