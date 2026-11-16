@@ -1261,20 +1261,42 @@ How to answer:
     };
   }
 
-  async function geminiGenerate({ system, contents, temperature = 0.4, maxOutputTokens = 2048, signal }) {
+  const FALLBACK_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+  async function geminiGenerate(opts) {
+    const first = AI.model.trim() || DEFAULT_MODEL;
+    const models = [first, ...FALLBACK_MODELS.filter((m) => m !== first)];
+    let lastErr;
+    for (const model of models) {
+      try { return await geminiGenerateOnce({ ...opts, model }); }
+      catch (e) {
+        lastErr = e;
+        // Busy or unavailable model: try the next one. Anything else (bad key, stopped by user): give up.
+        if (!(e.status === 503 || e.status === 500 || e.status === 504 || e.status === 524 || (e.code === "model" && model !== first))) throw e;
+      }
+    }
+    throw lastErr;
+  }
+
+  async function geminiGenerateOnce({ system, contents, temperature = 0.4, maxOutputTokens = 2048, signal, model }) {
     const base = usingProxy() ? proxyUrl() : "https://generativelanguage.googleapis.com/v1beta";
-    const url = `${base}/models/${encodeURIComponent(AI.model.trim() || DEFAULT_MODEL)}:generateContent`;
+    const url = `${base}/models/${encodeURIComponent(model)}:generateContent`;
     const headers = { "Content-Type": "application/json" };
     if (!usingProxy()) headers["x-goog-api-key"] = activeKey();
     const body = { contents, generationConfig: { temperature, maxOutputTokens } };
     if (system) body.systemInstruction = { parts: [{ text: system }] };
-    let res;
+    let res, timedOut = false;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, 40000);
+    if (signal) signal.addEventListener("abort", () => ctl.abort(), { once: true });
     try {
-      res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
+      res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: ctl.signal });
     } catch (e) {
+      clearTimeout(timer);
+      if (timedOut) throw Object.assign(new Error("Gemini took longer than 40 seconds to answer. Try again in a moment."), { code: "network", status: 504 });
       if (e.name === "AbortError") throw e;
       throw Object.assign(new Error("Couldn't reach Gemini. Check your internet connection."), { code: "network" });
     }
+    clearTimeout(timer);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const msg = (json.error && json.error.message) || `HTTP ${res.status}`;
@@ -1291,6 +1313,7 @@ How to answer:
   }
 
   function friendlyError(e) {
+    if (e.status === 503) return "Gemini is very busy right now (high demand on Google's side). Wait a minute and try again.";
     if (e.code === "rate") return "Gemini's free tier is busy or your quota ran out. Wait a minute and try again.";
     if (e.code === "model") return `Gemini doesn't recognise the model “${AI.model}”. Open Settings and enter a current model name from Google AI Studio.`;
     if (e.code === "key") return `Gemini rejected the request: ${e.message} Check your API key in Settings.`;
